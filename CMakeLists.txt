@@ -3,6 +3,7 @@
 #
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
+# add_subdirectory(C:\Users\zheng\OneDrive\Desktop\Code\firmware\connection_event_trigger\curl-8.7.1_9-win64-mingw.zip);
 
 cmake_minimum_required(VERSION 3.20.0)
 

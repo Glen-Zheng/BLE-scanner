@@ -26,14 +26,15 @@
 #define SWI_IRQn SWI0_IRQn
 #endif
 
-#define NUM_TRIGGERS   (50)
-#define INTERVAL_10MS  (0x8)
+#define NUM_TRIGGERS (50)
+#define INTERVAL_10MS (0x8)
 #define INTERVAL_100MS (0x50)
-#define PPI_CH_ID      15
+#define PPI_CH_ID 15
 
 #define ADVERTISING_UUID128 BT_UUID_128_ENCODE(0x038a803f, 0xf6b3, 0x420b, 0xa95a, 0x10cc7b32b6db)
 
-struct hci_cmd_vs_get_next_conn_event_counter_return {
+struct hci_cmd_vs_get_next_conn_event_counter_return
+{
 	uint8_t status;
 	uint16_t conn_handle;
 	uint16_t next_conn_event_counter;
@@ -59,7 +60,8 @@ static void egu0_handler(const void *context)
 {
 	nrf_egu_event_clear(NRF_EGU0, NRF_EGU_EVENT_TRIGGERED0);
 
-	if (timestamp_log_index < NUM_TRIGGERS) {
+	if (timestamp_log_index < NUM_TRIGGERS)
+	{
 		k_work_submit(&work);
 	}
 }
@@ -81,15 +83,17 @@ static int setup_connection_event_trigger(struct bt_conn *conn, bool enable)
 	uint16_t conn_handle;
 
 	err = bt_hci_get_conn_handle(conn, &conn_handle);
-	if (err) {
+	if (err)
+	{
 		printk("Failed obtaining conn_handle (err %d)\n", err);
 		return err;
 	}
 
 	buf = bt_hci_cmd_create(SDC_HCI_OPCODE_CMD_VS_GET_NEXT_CONN_EVENT_COUNTER,
-				sizeof(*cmd_get_conn_event_counter));
+							sizeof(*cmd_get_conn_event_counter));
 
-	if (!buf) {
+	if (!buf)
+	{
 		printk("Could not allocate command buffer\n");
 		return -ENOMEM;
 	}
@@ -99,9 +103,10 @@ static int setup_connection_event_trigger(struct bt_conn *conn, bool enable)
 
 	err = bt_hci_cmd_send_sync(SDC_HCI_OPCODE_CMD_VS_GET_NEXT_CONN_EVENT_COUNTER, buf, &rsp);
 
-	if (err) {
+	if (err)
+	{
 		printk("Error for command SDC_HCI_OPCODE_CMD_VS_GET_NEXT_CONN_EVENT_COUNTER (%d)\n",
-		       err);
+			   err);
 		return err;
 	}
 
@@ -109,9 +114,10 @@ static int setup_connection_event_trigger(struct bt_conn *conn, bool enable)
 		(struct hci_cmd_vs_get_next_conn_event_counter_return *)rsp->data;
 
 	buf = bt_hci_cmd_create(SDC_HCI_OPCODE_CMD_VS_SET_CONN_EVENT_TRIGGER,
-				sizeof(*cmd_set_trigger));
+							sizeof(*cmd_set_trigger));
 
-	if (!buf) {
+	if (!buf)
+	{
 		printk("Could not allocate command buffer\n");
 		return -ENOMEM;
 	}
@@ -129,22 +135,26 @@ static int setup_connection_event_trigger(struct bt_conn *conn, bool enable)
 	cmd_set_trigger->conn_evt_counter_start =
 		cmd_event_counter_return->next_conn_event_counter + 20;
 
-	if (enable) {
+	if (enable)
+	{
 		cmd_set_trigger->task_endpoint =
 			nrf_egu_task_address_get(NRF_EGU0, NRF_EGU_TASK_TRIGGER0);
 		IRQ_DIRECT_CONNECT(SWI_IRQn, 5, egu0_handler, 0);
 		nrf_egu_int_enable(NRF_EGU0, NRF_EGU_INT_TRIGGERED0);
 		NVIC_EnableIRQ(SWI_IRQn);
-	} else {
+	}
+	else
+	{
 		cmd_set_trigger->task_endpoint = 0;
 		nrf_egu_int_disable(NRF_EGU0, NRF_EGU_INT_TRIGGERED0);
 		NVIC_DisableIRQ(SWI_IRQn);
 	}
 
 	err = bt_hci_cmd_send_sync(SDC_HCI_OPCODE_CMD_VS_SET_CONN_EVENT_TRIGGER, buf, NULL);
-	if (err) {
+	if (err)
+	{
 		printk("Error for command SDC_HCI_OPCODE_CMD_VS_SET_CONN_EVENT_TRIGGER (%d)\n",
-		       err);
+			   err);
 		return err;
 	}
 
@@ -161,7 +171,8 @@ static int change_connection_interval(struct bt_conn *conn, uint16_t new_interva
 
 	err = bt_conn_le_param_update(conn, params);
 
-	if (err) {
+	if (err)
+	{
 		printk("Error when updating connection parameters (%d)\n", err);
 	}
 
@@ -174,10 +185,12 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
 
 	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
 
-	if (conn_err) {
+	if (conn_err)
+	{
 		printk("Failed to connect to %s (%u)\n", addr, conn_err);
 
-		if (conn == active_conn) {
+		if (conn == active_conn)
+		{
 			bt_conn_unref(active_conn);
 			active_conn = NULL;
 		}
@@ -199,16 +212,18 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 
 	printk("Disconnected: %s (reason %u)\n", addr, reason);
 
-	if (conn == active_conn) {
+	if (conn == active_conn)
+	{
 		bt_conn_unref(active_conn);
 		active_conn = NULL;
 	}
 }
 
 static void le_param_updated(struct bt_conn *conn, uint16_t interval, uint16_t latency,
-			     uint16_t timeout)
+							 uint16_t timeout)
 {
-	if (conn == active_conn) {
+	if (conn == active_conn)
+	{
 		printk("Connection parameters updated. New interval: 1.25 * %u ms\n", interval);
 	}
 }
@@ -225,12 +240,13 @@ static void adv_start(void)
 
 	err = bt_le_adv_start(
 		BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE | BT_LE_ADV_OPT_ONE_TIME,
-			BT_GAP_ADV_FAST_INT_MIN_2,
-			BT_GAP_ADV_FAST_INT_MAX_2,
-			NULL),
+						BT_GAP_ADV_FAST_INT_MIN_2,
+						BT_GAP_ADV_FAST_INT_MAX_2,
+						NULL),
 		ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 
-	if (err) {
+	if (err)
+	{
 		printk("Advertising failed to start (err %d)\n", err);
 		return;
 	}
@@ -239,7 +255,7 @@ static void adv_start(void)
 }
 
 static void scan_filter_match(struct bt_scan_device_info *device_info,
-			      struct bt_scan_filter_match *filter_match, bool connectable)
+							  struct bt_scan_filter_match *filter_match, bool connectable)
 {
 	char addr[BT_ADDR_LE_STR_LEN];
 
@@ -278,21 +294,23 @@ static void scan_start(void)
 	bt_scan_init(&scan_init);
 	bt_scan_cb_register(&scan_cb);
 
-	err = bt_scan_filter_add(BT_SCAN_FILTER_TYPE_UUID,
-				 BT_UUID_DECLARE_128(ADVERTISING_UUID128));
+	err = bt_scan_filter_add(BT_SCAN_FILTER_TYPE_UUID, BT_UUID_DECLARE_128(ADVERTISING_UUID128));
 
-	if (err) {
+	if (err)
+	{
 		printk("Scanning filters cannot be set (err %d)\n", err);
 		return;
 	}
 
 	err = bt_scan_filter_enable(BT_SCAN_UUID_FILTER, false);
-	if (err) {
+	if (err)
+	{
 		printk("Filters cannot be turned on (err %d)\n", err);
 	}
 
 	err = bt_scan_start(BT_SCAN_TYPE_SCAN_PASSIVE);
-	if (err) {
+	if (err)
+	{
 		printk("Starting scanning failed (err %d)\n", err);
 		return;
 	}
@@ -309,23 +327,30 @@ int main(void)
 	printk("Starting Connection Event Trigger Example.\n");
 
 	err = bt_enable(NULL);
-	if (err) {
+	if (err)
+	{
 		printk("Bluetooth init failed (err %d)\n", err);
 		return 0;
 	}
 
-	while (true) {
+	while (true)
+	{
 		printk("Choose device role - type c (central) or p (peripheral): ");
 
 		char input_char = console_getchar();
 
 		printk("\n");
 
-		if (input_char == 'c') {
+		if (input_char == 'c')
+		{
 			printk("Central. Starting scanning\n");
+			// init_table(&hashTable);
 			scan_start();
+
 			break;
-		} else if (input_char == 'p') {
+		}
+		else if (input_char == 'p')
+		{
 			printk("Peripheral. Starting advertising\n");
 			adv_start();
 			break;
@@ -334,17 +359,20 @@ int main(void)
 		printk("Invalid role\n");
 	}
 
-	while (true) {
-		if (connection_established) {
+	while (true)
+	{
+		if (connection_established)
+		{
 			printk("Connection established.\n");
 			connection_established = false;
 			break;
 		}
 	}
 
-	for (;;) {
+	for (;;)
+	{
 		printk("Press any key to switch to a 10ms connection interval and set up "
-		       "connection event trigger:\n");
+			   "connection event trigger:\n");
 
 		(void)console_getchar();
 		printk("\n");
@@ -355,30 +383,34 @@ int main(void)
 
 		err = setup_connection_event_trigger(active_conn, true);
 
-		if (err) {
+		if (err)
+		{
 			printk("Could not set up event trigger. (err %d)\n", err);
 			return 0;
 		}
 
-		while (timestamp_log_index < NUM_TRIGGERS) {
+		while (timestamp_log_index < NUM_TRIGGERS)
+		{
 			;
 		}
 
 		err = setup_connection_event_trigger(active_conn, false);
 
-		if (err) {
+		if (err)
+		{
 			printk("Could not disable event trigger. (err %d)\n", err);
 			return 0;
 		}
 
 		printk("Printing connection event trigger log.\n"
-		       "+-------------+----------------+----------------------------------+\n"
-		       "| Trigger no. | Timestamp (us) | Time since previous trigger (us) |\n"
-		       "+-------------+----------------+----------------------------------+\n");
+			   "+-------------+----------------+----------------------------------+\n"
+			   "| Trigger no. | Timestamp (us) | Time since previous trigger (us) |\n"
+			   "+-------------+----------------+----------------------------------+\n");
 
-		for (uint16_t i = 1; i < NUM_TRIGGERS; i++) {
+		for (uint16_t i = 1; i < NUM_TRIGGERS; i++)
+		{
 			printk("| %11d | %11u us | %29u us |\n", i, timestamp_log[i],
-			       timestamp_log[i] - timestamp_log[i - 1]);
+				   timestamp_log[i] - timestamp_log[i - 1]);
 		}
 
 		printk("+-------------+----------------+----------------------------------+\n");
