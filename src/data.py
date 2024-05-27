@@ -1,1 +1,0 @@
-# Need to use the pyserial library to read data from the serial terminal, looking for "\n" and then printing the next line.
