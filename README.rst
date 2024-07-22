@@ -1,1 +1,1 @@
-In this project, I used the nRF52840 with the ZephyrRTOS to build a Bluetooth scanner, able to scan for Bluetooth packets being sent over Buetooth, parse the payload, and generate a csv file with the data held.
+In this project, I used the nRF52840 with the ZephyrRTOS to build a Bluetooth scanner, able to scan for Bluetooth packets being sent over Bluetooth, parse the payload for meaningful data, and send the data to be used elsewhere.
